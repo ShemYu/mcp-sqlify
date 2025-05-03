@@ -231,6 +231,110 @@ $ uv add <module_name>
 4. 增強處理特殊案例的能力
 5. 整合完整流程並進行全面測試
 
+### 5.6 專案進度檢查表
+
+#### 基礎架構與環境
+- [x] 建立專案結構與單元測試架構
+- [x] 設置虛擬環境與相依套件管理
+- [x] 建立模組化開發規劃
+
+#### 資料管理模組 (data_manager)
+- [x] 完成 `WikiSQLDataset` 類用於下載與管理 WikiSQL 資料集
+- [x] 連接 Hugging Face datasets 庫並使用 auth token
+- [x] 實作 `SQLiteConverter` 用於將 WikiSQL 資料轉換為 SQLite 格式
+- [x] 實作 `TestDBManager` 管理測試用資料庫
+
+```python
+# 資料管理模組使用範例
+from src.data_manager.wikisql_dataset import WikiSQLDataset
+from src.data_manager.sqlite_converter import SQLiteConverter, TestDBManager
+
+# 1. 用 WikiSQLDataset 下載與載入 WikiSQL 資料集
+dataset = WikiSQLDataset()  # 從 .env 說取 HUGGING_FACE_AUTH_TOKEN
+
+# 載入一部分資料
+examples = dataset.load_split('train', limit=5)  # 只載入幾個樣本
+
+# 2. 使用 SQLiteConverter 將 WikiSQL 資料轉換為 SQLite 資料庫
+with SQLiteConverter('wikisql_examples.sqlite') as converter:
+    results = converter.convert_examples(examples)
+    
+    # 實際查詢
+    query = "SELECT * FROM ex_1234 LIMIT 3;"
+    columns, rows = converter.execute_query(query)
+
+# 3. 使用 TestDBManager 管理測試資料庫
+test_db_manager = TestDBManager()
+db_path = test_db_manager.create_test_db("unit_test_1", examples)  # 創建測試資料庫
+```
+
+#### Schema 加載模組 (schema_loader)
+- [x] 實作 `SchemaLoader` 用於從 SQLite 資料庫讀取 schema
+- [x] 實作 `WikiSQLSchemaLoader` 用於直接從 WikiSQL JSON 資料讀取 schema
+- [x] 設計標準化 schema JSON 格式
+
+```python
+# Schema 加載模組使用範例
+from src.schema_loader import SchemaLoader, load_schema
+from src.schema_loader import WikiSQLSchemaLoader, load_schema_from_wikisql
+from src.data_manager.wikisql_dataset import WikiSQLDataset
+
+# 1. 從 SQLite 資料庫載入 schema
+with SchemaLoader("path/to/database.sqlite") as loader:
+    schema = loader.load_schema()
+    # 將 schema 保存為 JSON 文件
+    loader.save_schema_to_file("schema.json")
+
+# 便捷函數方式
+schema = load_schema("path/to/database.sqlite", output_path="schema.json")
+
+# 2. 直接從 WikiSQL 資料中載入 schema
+dataset = WikiSQLDataset()
+example = dataset.get_example('dev', 0)  # 取得單一樣本
+
+# 從 WikiSQL 樣本載入 schema
+wikisql_loader = WikiSQLSchemaLoader()
+schema = wikisql_loader.load_schema_from_example(example)
+
+# schema 標準化 JSON 格式
+print(schema)
+# {
+#   "tables": [{
+#     "name": "sample_table",
+#     "columns": [
+#       {"name": "column1", "type": "TEXT", "not_null": true, "is_primary_key": false},
+#       ...
+#     ],
+#     "foreign_keys": []
+#   }]
+# }
+```
+
+#### 前處理模組 (preprocess)
+- [ ] 實作自然語詞句正規化處理
+- [ ] 增加拼寫檢查與糾正功能
+- [ ] 整合語式標記與語義分析
+
+#### 自然語理解模組 (nlu)
+- [ ] 實作意圖判斷模組
+- [ ] 開發欄位與別名對應功能
+- [ ] 實現实體識別與關鍵字擷取
+
+#### SQL 生成模組 (sql_generator)
+- [ ] 開發基本 SQL 生成週部
+- [ ] 實作 Seq2Seq 或 LLM Prompt 建模
+- [ ] 添加 SQL 驗證與優化功能
+
+#### 執行模組 (executor)
+- [ ] 開發 SQL 執行和結果格式化
+- [ ] 實作錯誤處理與回饔機制
+- [ ] 增加查詢效能監控
+
+#### 整合與測試
+- [ ] 開發統一 API 封裝
+- [ ] 實施端對端整合測試
+- [ ] 效能基準測試與優化
+
 ---
 
 這份 Markdown 提供了一條完整實踐脈絡與模組化開發規劃，可依此進行獨立開發與驗證，確保每個組件都能達到預期功能，最終整合成一個完整可靠的 text-to-SQL 系統。
