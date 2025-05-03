@@ -10,54 +10,68 @@
 4. SQL 生成 (Seq2Seq or LLM few-shot)
 5. SQL 執行 & 回傳結果
 
-## 2. 測試用資料庫
+## 2. 資料集
 
-### 2.1 資料庫選型
+### 2.1 WikiSQL 資料集
 
-* SQLite (`data/init_db.sqlite`)：輕量、免安裝，適合示範與單元測試。
+本專案采用 [WikiSQL](https://huggingface.co/datasets/Salesforce/wikisql) 作為測試和訓練的標準資料集，具備以下特點：
 
-### 2.2 Schema 定義 (`data/init_db.sql`)
+* 包含超過 80,000 個自然語言問題及其對應的 SQL 查詢
+* 資料來源於維基百科，液題多樣
+* 已預先分割為訓練、驗證和測試集
+* 涉及 24,241 個不同的表格，每個問題對應到一個獨立的表格
+* 被學術界和工業界廣泛採用作為基準測試
+
+### 2.2 資料集結構
+
+```
+{
+  "phase": 1,  // 資料集分割 (1:train, 2:dev, 3:test)
+  "question": "有多少項目的交易金額超過 100 元?",  // 自然語言問題
+  "table": {  // 表格信息
+    "header": ["id", "name", "amount", "date"],  // 列名稱
+    "types": ["number", "text", "real", "text"],  // 每列的資料類型
+    "rows": [["1", "Alice", "120.5", "2025-04-01"], ...]  // 表格行數據
+  },
+  "sql": {  // SQL 查詢信息
+    "sel": 0,  // SELECT 屬性欄位索引
+    "agg": 1,  // 聚合函數類型 (0:none, 1:COUNT, 2:SUM, 3:AVG...)
+    "conds": [[2, 0, "100"]],  // 條件列表 [欄位, 操作符, 值]
+    "human_readable": "SELECT COUNT(id) FROM table WHERE amount > 100"  // 人類可讀 SQL
+  }
+}
+```
+
+### 2.3 小型導入用資料庫
+
+為了方便開發和測試，我們也提供了一個精簡版的 SQLite 資料庫 (`data/small_sample.sqlite`)，包含簡化後的 WikiSQL 部分數據：
 
 ```sql
--- users table
-CREATE TABLE users (
+-- 表格定義範例：銀行交易表
+CREATE TABLE transactions (
   id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL,
-  age INTEGER,
-  country TEXT
-);
-
--- orders table
-CREATE TABLE orders (
-  id INTEGER PRIMARY KEY,
-  user_id INTEGER,
+  customer_name TEXT NOT NULL,
   amount REAL,
-  order_date TEXT,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  transaction_date TEXT,
+  category TEXT
 );
+
+-- 更多表格定義將傳入...
 ```
 
-### 2.3 Sample Data (`data/sample_data.sql`)
-
-```sql
-INSERT INTO users (name, age, country) VALUES
-  ('Alice', 30, 'Taiwan'),
-  ('Bob', 25, 'USA'),
-  ('Charlie', 35, 'UK');
-
-INSERT INTO orders (user_id, amount, order_date) VALUES
-  (1, 120.5, '2025-04-01'),
-  (2, 75.0, '2025-04-05'),
-  (1, 200.0, '2025-04-10');
-```
+本專案將實作自動化處理 WikiSQL 資料集並轉換為 SQLite 格式的工具。
 
 ## 3. 專案高階模組架構
 
 ```
 text2sql_project/
 ├── data/
-│   ├── init_db.sql          # schema + sample data
-│   └── init_db.sqlite       # SQLite binary
+│   ├── wikisql/              # WikiSQL 原始資料集
+│   │   ├── train.jsonl       # 訓練集
+│   │   ├── dev.jsonl         # 驗證集
+│   │   └── test.jsonl        # 測試集
+│   ├── small_sample.sqlite  # 精簡版 SQLite 樣本資料庫
+│   └── converter.py         # WikiSQL 轉 SQLite 工具
 │
 ├── src/
 │   ├── preprocess/          # 前處理：tokenization、spell-check
@@ -80,6 +94,39 @@ text2sql_project/
 
 ## 4. 模組說明
 
+* **data_manager**
+
+  * WikiSQL 資料集下載與管理
+  * WikiSQL 轉換為 SQLite 格式
+  * 動態創建測試用資料庫
+  * 資料回傳格式：
+    ```python
+    {
+        # 原始資料(從 WikiSQL 資料集)
+        "raw_data": {
+            "question": "查詢...",
+            "table": {
+                "header": [...],
+                "types": [...],
+                "rows": [...]
+            },
+            "sql": {...}
+        },
+        # 轉換後的 SQLite 資料資訊
+        "sqlite_info": {
+            "table_name": "example_123",
+            "db_path": "path/to/db.sqlite",
+            "create_sql": "CREATE TABLE example_123...",
+            "sample_query": "SELECT * FROM example_123 WHERE..."
+        }
+    }
+    ```
+
+  * 主要類別與方法：
+    - `WikiSQLDataset`: 負責下載、解析與快取 WikiSQL 資料
+    - `SQLiteConverter`: 將 WikiSQL 表格轉換為 SQLite 表格
+    - `TestDBManager`: 管理測試用 SQLite 數據庫
+
 * **preprocess**
 
   * Tokenization (使用 `spaCy` / `NLTK`)
@@ -88,7 +135,8 @@ text2sql_project/
 * **schema\_loader**
 
   * 讀取 SQLite PRAGMA schema
-  * 輸出 JSON 格式：`{tables: [{name, columns: [{name, type}]}]}`
+  * 解析 WikiSQL 表格定義
+  * 輸出統一 JSON 格式：`{tables: [{name, columns: [{name, type}]}]}`
 
 * **nlu**
 
@@ -161,23 +209,9 @@ $ .venv\Scripts\activate    # Windows
 
 # 使用 UV 安裝相依套件
 $ uv pip install -r requirements.txt
+$ uv add <module_name>
 ```
 
-#### 使用傳統 venv 方式
-
-如果偏好使用 Python 內建的 venv：
-
-```bash
-# 創建虛擬環境
-$ python -m venv .venv
-
-# 啟用虛擬環境
-$ source .venv/bin/activate  # Unix/MacOS
-$ .venv\Scripts\activate    # Windows
-
-# 安裝相依套件
-$ pip install -r requirements.txt
-```
 
 #### 開發時注意事項
 
