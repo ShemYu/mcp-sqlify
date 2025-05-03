@@ -138,7 +138,58 @@ text2sql_project/
 * **效能測試**：確保模組在預期資料量下的效能表現
 * **異常處理測試**：確保模組能夠優雅地處理各種異常情況
 
-### 5.4 迭代開發計劃
+### 5.4 虛擬環境設置
+
+為確保開發環境的一致性與乾淨，本專案使用 UV 和 .venv 進行虛擬環境管理：
+
+#### 使用 UV 安裝相依套件
+
+[UV](https://github.com/astral-sh/uv) 是新一代的 Python 套件安裝與虛擬環境管理工具，速度比 pip 更快：
+
+```bash
+# 安裝 UV (如果尚未安裝)
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+## or 
+$ pip install uv
+
+# 創建虛擬環境
+$ uv venv --python 3.12 .venv
+
+# 啟用虛擬環境
+$ source .venv/bin/activate  # Unix/MacOS
+$ .venv\Scripts\activate    # Windows
+
+# 使用 UV 安裝相依套件
+$ uv pip install -r requirements.txt
+```
+
+#### 使用傳統 venv 方式
+
+如果偏好使用 Python 內建的 venv：
+
+```bash
+# 創建虛擬環境
+$ python -m venv .venv
+
+# 啟用虛擬環境
+$ source .venv/bin/activate  # Unix/MacOS
+$ .venv\Scripts\activate    # Windows
+
+# 安裝相依套件
+$ pip install -r requirements.txt
+```
+
+#### 開發時注意事項
+
+* 永遠在啟用虛擬環境後進行開發與測試
+* 新增相依套件時更新 `requirements.txt`：
+  ```bash
+  $ uv pip freeze > requirements.txt  # 使用 UV
+  $ pip freeze > requirements.txt     # 使用 pip
+  ```
+* 確保 `.venv/` 資料夾已加入 `.gitignore`，避免將虛擬環境檔案提交至版本控制
+
+### 5.5 迭代開發計劃
 
 1. 建立基礎功能並確保穩定性
 2. 針對複雜自然語句優化處理能力
