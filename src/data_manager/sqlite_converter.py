@@ -150,7 +150,7 @@ class SQLiteConverter:
             for value in row:
                 if isinstance(value, str):
                     # 字串需要轉譯單引號並包裹在單引號中
-                    values.append(f"'{value.replace(\"'\", \"''\")}'")
+                    values.append(f"'{value.replace("'", "''")}'")
                 elif value is None:
                     values.append('NULL')
                 else:

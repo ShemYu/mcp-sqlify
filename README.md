@@ -223,6 +223,33 @@ $ uv add <module_name>
   ```
 * 確保 `.venv/` 資料夾已加入 `.gitignore`，避免將虛擬環境檔案提交至版本控制
 
+#### 測試環境設置
+
+為確保測試順利執行，請確保所有相依套件都已正確安裝：
+
+```bash
+# 使用 uv 安裝測試依賴
+$ uv pip install pytest pytest-cov datasets python-dotenv
+
+# 或使用一次性安裝所有必要套件
+$ uv pip install -r requirements.txt
+```
+
+執行測試時，推薦直接在虛擬環境中執行，而非使用 `uv run`，以確保所有相依關係都能被正確解析：
+
+```bash
+# 純浄測試
+$ source .venv/bin/activate  # 啟用虛擬環境
+$ pytest tests/                  # 執行所有測試
+$ pytest tests/test_wikisql_schema_loader.py  # 執行特定測試
+```
+
+如果您仍想使用 `uv run`，請確保已透過 `uv pip install` 安裝了所有需要的套件：
+
+```bash
+$ uv run pytest tests/
+```
+
 ### 5.5 迭代開發計劃
 
 1. 建立基礎功能並確保穩定性
