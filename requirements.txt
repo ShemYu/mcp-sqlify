@@ -1,0 +1,6 @@
+# 基本依賴
+pytest==7.4.0
+pytest-cov==4.1.0
+
+# 資料庫相關
+sqlite-utils==3.35
