@@ -1,188 +1,144 @@
-# `dspy` Usage Guide (Latest Version)
+# DSPy Usage Guide (Latest Version)
 
-This guide introduces the core features of `dspy`, a lightweight Python library for building data pipelines, transformations, and analyses. It covers installation, key concepts, and rich example usage to help you get started quickly.
+This guide walks you through the core functionality of DSPy (Declarative Self-improving Python), from installation to advanced usage, using the latest API patterns.
 
 ---
 
-## 1. Installation
+## 1. Installation & Configuration
 
 ```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-.\.venv\Scripts\activate  # Windows
-
-# Install dspy
+# Install DSPy
 pip install --upgrade dspy
 ```
 
-Check version:
+Authenticate your LLM provider before use (examples below). DSPy supports OpenAI, Anthropic, Databricks, Ollama, and any OpenAI-compatible endpoint. ([dspy.ai](https://dspy.ai/))
 
-```bash
-python -c "import dspy; print(dspy.__version__)"
+```python
+import dspy
+# OpenAI GPT-4o-mini
+lm = dspy.LM('openai/gpt-4o-mini', api_key='YOUR_OPENAI_API_KEY')
+# or Anthropic Claude
+# lm = dspy.LM('anthropic/claude-3-opus-20240229', api_key='YOUR_ANTHROPIC_API_KEY')
+# or Databricks Meta Llama
+# lm = dspy.LM('databricks/databricks-meta-llama-3-1-70b-instruct')
+
+# Configure global LLM
+dspy.configure(lm=lm)
 ```
 
 ---
 
-## 2. Core Concepts
+## 2. Calling the LLM Directly
 
-* **Pipeline**: A sequence of data processing stages.
-* **Transformer**: Stateless operations that transform a DataFrame (e.g., filter, map).
-* **Loader**: Read data from various sources (CSV, JSON, SQL).
-* **Writer**: Output results to storage (CSV, database).
-* **Task**: A named pipeline ready for execution and monitoring.
+Even without modules, you can use the configured `lm`:
+
+````python
+# Simple completion
+print(lm("Summarize the plot of Hamlet in one sentence."))
+# Chat-style
+en = lm(messages=[{"role": "user", "content": "Hello!"}])
+print(en)
+``` ([dspy.ai](https://dspy.ai/))
 
 ---
 
-## 3. Basic Pipeline Example
+## 3. Modules: Declarative AI Components
+
+DSPy modules let you express tasks as type-checked signatures.
+
+### 3.1 Predict (Simple Inference)
 
 ```python
-from dspy import Pipeline, CsvLoader, Filter, Map, CsvWriter
+from dspy import Signature, InputField, OutputField, Predict
+from typing import Literal
 
-# 1. Load data from CSV
-loader = CsvLoader(path="data/input.csv")
+class Sentiment(Signature):
+    text: str = InputField()
+    sentiment: Literal['positive','negative','neutral'] = OutputField()
 
-# 2. Define transformations
-filter_age = Filter(lambda df: df[df.age >= 18])
-capitalize_name = Map(lambda df: df.assign(name=df.name.str.title()))
+predictor = Predict(Sentiment)
+res = predictor(text="This movie was fantastic!")
+print(res.sentiment)  # e.g., 'positive'
+``` ([dspy.ai](https://dspy.ai/))
 
-# 3. Write output to CSV
-writer = CsvWriter(path="data/output.csv")
+### 3.2 ChainOfThought (Step-by-step reasoning)
 
-# 4. Build and run pipeline
-pipeline = Pipeline(
-    name="adult_users_pipeline",
-    stages=[loader, filter_age, capitalize_name, writer]
+```python
+from dspy import ChainOfThought
+
+cot = ChainOfThought("question -> answer: float")
+ans = cot(question="What is the probability of rolling two sixes with two dice?")
+print(ans.reasoning)
+``` ([dspy.ai](https://dspy.ai/))
+
+### 3.3 ReAct (Reason+Action agents)
+
+```python
+from dspy import ReAct, PythonInterpreter, ColBERTv2
+
+# Define tool functions
+def calc(expr: str):
+    return PythonInterpreter({})(expr)
+
+def wiki(query: str):
+    docs = ColBERTv2(url='http://localhost:2017/wiki')(query, k=3)
+    return [d['text'] for d in docs]
+
+agent = ReAct(
+    "question -> answer: str",
+    tools=[calc, wiki]
 )
-pipeline.run()
-```
+out = agent(question="What year did DSPy launch? Do the research if needed.")
+print(out.answer)
+``` ([dspy.ai](https://dspy.ai/))
 
 ---
 
-## 4. SQL Integration
+## 4. Evaluation Utilities
+
+DSPy offers built-in evaluators for exact match, semantic F1, and composite tasks.
 
 ```python
-from dspy import SqlLoader, SqlWriter
+from dspy import Evaluate, answer_exact_match, SemanticF1
 
-# Load from SQLite
-db_url = "sqlite:///data/db.sqlite"
-loader = SqlLoader(db_url=db_url, query="SELECT * FROM users")
-
-# Write back filtered data
-overwrite_writer = SqlWriter(db_url=db_url, table_name="adult_users", if_exists="replace")
-
-pipeline = Pipeline(
-    name="sql_adult_users",
-    stages=[loader, Filter(lambda df: df.age >= 18), overwrite_writer]
+eval_chain = Evaluate(
+    signature=Sentiment,
+    evaluator=answer_exact_match
 )
-pipeline.run()
-```
+# or semantic match
+eval_f1 = Evaluate(signature=Sentiment, evaluator=SemanticF1)
+``` ([dspy.ai](https://dspy.ai/))
 
 ---
 
-## 5. Configuration & Task Scheduling
-
-```yaml
-# config/pipelines.yaml
-adult_users_pipeline:
-  loader:
-    type: CsvLoader
-    params:
-      path: data/users.csv
-  stages:
-    - type: Filter
-      params:
-        function: "lambda df: df[df.purchase_amount > 100]"
-    - type: Map
-      params:
-        function: "lambda df: df.assign(flag='high_value')"
-  writer:
-    type: CsvWriter
-    params:
-      path: data/high_value_customers.csv
-  schedule: "CRON 0 2 * * *"  # daily at 02:00
-```
-
-Load and schedule:
+## 5. Persistence: Saving & Loading Modules
 
 ```python
-from dspy import TaskManager
-
-tm = TaskManager(config_path="config/pipelines.yaml")
-# Execute all pipelines immediately
-tm.run_all()
-# Start scheduler in background
-tm.start_scheduler()
-```
+# Save a fine-tuned module
+predictor.save('sentiment-module')
+# Load later
+from dspy import load
+predictor2 = load('sentiment-module')
+``` ([dspy.ai](https://dspy.ai/))
 
 ---
 
-## 6. Monitoring & Logging
+## 6. Deployment & Observability
 
-```python
-# Enable verbose logging
-dspy.configure_logging(level="INFO")
+- **MCP Integration**: Use `dspy.MCP` to embed modules into production pipelines. ([dspy.ai](https://dspy.ai/))
+- **Logging**: Enable detailed logs:
+  ```python
+dspy.enable_logging()
+````
 
-# Inspect pipeline status
-status = pipeline.status()
-print(status)
-# { 'name': 'adult_users_pipeline', 'last_run': '2025-05-01T02:00:00', 'status': 'success' }
-```
+* **Debugging**: Wrap calls with `dspy.StreamListener()` to trace intermediate steps.
 
 ---
 
-## 7. Advanced Usage
+## 7. Further Resources
 
-### 7.1 Custom Transformer
+* **API Reference**: [https://dspy.ai/docs/api](https://dspy.ai/docs/api)
+* **GitHub Repo**: [https://github.com/stanfordnlp/dspy](https://github.com/stanfordnlp/dspy)
+* **Tutorials**: [https://dspy.ai/tutorials](https://dspy.ai/tutorials)
 
-```python
-from dspy import Transformer
-
-class AddFullName(Transformer):
-    def transform(self, df):
-        df['full_name'] = df['first_name'] + ' ' + df['last_name']
-        return df
-
-pipeline = Pipeline(
-    name="user_fullname",
-    stages=[CsvLoader("data/users.csv"), AddFullName(), CsvWriter("data/users_full.csv")]
-)
-pipeline.run()
-```
-
-### 7.2 Parallel Processing
-
-```python
-pipeline = Pipeline(
-    name="parallel_pipeline",
-    stages=[loader, filter_age, capitalize_name, writer],
-    parallel=True,  # enable parallel stage execution
-    num_workers=4
-)
-pipeline.run()
-```
-
----
-
-## 8. Error Handling
-
-```python
-from dspy import PipelineError
-
-try:
-    pipeline.run()
-except PipelineError as e:
-    print(f"Pipeline failed at stage {e.stage}: {e.original_exception}")
-```
-
----
-
-## 9. Resources & References
-
-* Official Documentation: [https://dspy.readthedocs.io](https://dspy.readthedocs.io)
-* GitHub: [https://github.com/dspy-org/dspy](https://github.com/dspy-org/dspy)
-* Community Slack: [https://dspy.slack.com](https://dspy.slack.com)
-
----
-
-*Guide last updated on 2025-05-04*
+*Guide last updated May 4, 2025*
