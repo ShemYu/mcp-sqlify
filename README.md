@@ -47,11 +47,11 @@ The project follows a modular design:
 
 **Phase 4: Evaluation Pipeline (New)**
 
-*   [ ] **Task 4.1**: Add `datasets` library to `requirements.txt`.
-*   [ ] **Task 4.2**: Create an evaluation script (e.g., `scripts/evaluate.py` or within `tests/`).
-*   [ ] **Task 4.3**: Implement logic in the script to load the WikiSQL dataset (`validation` split) using `datasets.load_dataset("wikisql")`.
-*   [ ] **Task 4.4**: Implement a function to format the WikiSQL table schema (`example['table']`) into a `CREATE TABLE` string suitable for the `SQLGenerator`.
-*   [ ] **Task 4.5**: Implement the evaluation loop:
+*   [x] **Task 4.1**: Add `datasets` library to `requirements.txt`.
+*   [x] **Task 4.2**: Create an evaluation script (e.g., `scripts/evaluate.py` or within `tests/`).
+*   [x] **Task 4.3**: Implement logic in the script to load the WikiSQL dataset (`validation` split) using `datasets.load_dataset("wikisql")`.
+*   [x] **Task 4.4**: Implement a function to format the WikiSQL table schema (`example['table']`) into a `CREATE TABLE` string suitable for the `SQLGenerator`.
+*   [x] **Task 4.5**: Implement the evaluation loop:
     *   Iterate through the loaded dataset.
     *   For each example, extract the question and the formatted schema string.
     *   Call `SQLGenerator.generate(question, schema_string)` to get the predicted SQL.
