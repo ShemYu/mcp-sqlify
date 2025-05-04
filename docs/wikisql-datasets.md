@@ -72,7 +72,7 @@ print(ds)
 ```python
 example = ds['train'][0]
 print("Question:", example['question'])
-print("SQL Query:", example['sql']['query'])
+print("SQL Query:", example['sql']['human_readable'])
 print("Table ID:", example['table_id'])
 ```
 

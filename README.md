@@ -41,19 +41,38 @@ The project follows a modular design:
 
 **Phase 3: Integration & Testing (User Task)**
 
-*   [ ] **Task 3.1**: Write high-level integration tests (`tests/test_integration.py`) to verify the `SQLGenerator.generate` method with sample questions and a predefined schema string.
+*   [ ] **Task 3.1**: Write high-level integration tests (`tests/test_integration.py`) to verify the `SQLGenerator.generate` method with sample questions and a *predefined, static schema string*.
     *   Ensure `.env` is set up with `OPENAI_API_KEY`.
-    *   Ensure necessary dependencies are installed (`pip install -r requirements.txt`).
+    *   Ensure necessary dependencies are installed (`pip install -r requirements.txt`, including `pytest`).
 
-**Phase 4: Refinement (Future)**
+**Phase 4: Evaluation Pipeline (New)**
 
-*   [ ] **Task 4.1**: Refine the prompt template (`PROMPT_TEMPLATE` in `src/generator/core.py`) for better accuracy and handling of edge cases.
-*   [ ] **Task 4.2**: Add more robust error handling.
-*   [ ] **Task 4.3**: Consider adding schema validation or parsing logic if needed.
-*   [ ] **Task 4.4**: Package the module for easier distribution/use.
+*   [ ] **Task 4.1**: Add `datasets` library to `requirements.txt`.
+*   [ ] **Task 4.2**: Create an evaluation script (e.g., `scripts/evaluate.py` or within `tests/`).
+*   [ ] **Task 4.3**: Implement logic in the script to load the WikiSQL dataset (`validation` split) using `datasets.load_dataset("wikisql")`.
+*   [ ] **Task 4.4**: Implement a function to format the WikiSQL table schema (`example['table']`) into a `CREATE TABLE` string suitable for the `SQLGenerator`.
+*   [ ] **Task 4.5**: Implement the evaluation loop:
+    *   Iterate through the loaded dataset.
+    *   For each example, extract the question and the formatted schema string.
+    *   Call `SQLGenerator.generate(question, schema_string)` to get the predicted SQL.
+    *   Compare the `predicted_sql` with the gold SQL (`example['sql']['query']`). Initial comparison can be string-based. (Execution-based evaluation, as shown in `docs/wikisql-datasets.md`, requires creating temporary DBs and can be added later if needed).
+    *   Calculate and report metrics (e.g., exact match accuracy).
+
+**Phase 5: Refinement (Future)**
+
+*   [ ] **Task 5.1**: Refine the prompt template (`PROMPT_TEMPLATE` in `src/generator/core.py`) based on evaluation results for better accuracy and handling of edge cases.
+*   [ ] **Task 5.2**: Add more robust error handling in the generator and evaluation script.
+*   [ ] **Task 5.3**: Consider adding schema validation or parsing logic if needed.
+*   [ ] **Task 5.4**: Package the module for easier distribution/use.
 
 ## How to Run Tests (After Task 3.1)
 
 1.  Create a `.env` file from `.env.example` and add your `OPENAI_API_KEY`.
 2.  Install dependencies: `pip install -r requirements.txt`
 3.  Run pytest: `pytest`
+
+## How to Run Evaluation (After Phase 4)
+
+1.  Ensure `.env` file is set up.
+2.  Ensure dependencies are installed (`pip install -r requirements.txt`).
+3.  Run the evaluation script: `python scripts/evaluate.py` (or the path you choose in Task 4.2).
