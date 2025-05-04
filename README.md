@@ -60,10 +60,21 @@ The project follows a modular design:
 
 **Phase 5: Refinement (Future)**
 
-*   [ ] **Task 5.1**: Refine the prompt template (`PROMPT_TEMPLATE` in `src/generator/core.py`) based on evaluation results for better accuracy and handling of edge cases.
-*   [ ] **Task 5.2**: Add more robust error handling in the generator and evaluation script.
-*   [ ] **Task 5.3**: Consider adding schema validation or parsing logic if needed.
-*   [ ] **Task 5.4**: Package the module for easier distribution/use.
+*   [ ] **Task 5.1**: Implement Advanced Evaluation Metrics:
+    *   Implement Execution Accuracy (requires temporary DB setup, see `docs/wikisql-datasets.md`).
+    *   Explore/Implement other metrics like Exact Logical Form Match, Component-Level F1, Schema Linking Accuracy for more granular insights.
+*   [ ] **Task 5.2**: Refine Prompt & Model:
+    *   Analyze errors based on evaluation results (logs or advanced metrics).
+    *   Refine the prompt template (`PROMPT_TEMPLATE` in `src/generator/core.py`) for better accuracy and handling of edge cases.
+    *   Experiment with different LLM parameters or alternative models.
+*   [ ] **Task 5.3**: Explore Algorithmic Optimizations:
+    *   Consider adding Retrieval-Augmented Generation (RAG) for schema elements if needed.
+    *   Experiment with different chain or graph structures (e.g., using LangGraph).
+*   [ ] **Task 5.4**: Expand Evaluation Datasets:
+    *   Incorporate other standard Text-to-SQL datasets (e.g., Spider) for broader testing and generalization.
+*   [ ] **Task 5.5**: Add more robust error handling in the generator and evaluation script.
+*   [ ] **Task 5.6**: Consider adding schema validation or parsing logic if needed.
+*   [ ] **Task 5.7**: Package the module for easier distribution/use.
 
 ## How to Run Tests (After Task 3.1)
 
